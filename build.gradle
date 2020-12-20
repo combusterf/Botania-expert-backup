@@ -217,4 +217,4 @@ curse {
     relatedProject 'baubles': 'requiredLibrary'
 }
 
-defaultTasks 'clean', 'build', 'sort', 'forgecraft', 'incrementBuildNumber', 'curse', 'upload'
+defaultTasks 'clean', 'build', 'sort', 'forgecraft', 'incrementBuildNumber' //, 'curse', 'upload'
