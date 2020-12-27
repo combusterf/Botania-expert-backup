@@ -123,10 +123,10 @@ public class CommonProxy {
 
 		ChestGenHandler.init();
 
-		LexiconData.init();
-
 		if(Botania.gardenOfGlassLoaded)
 			new WorldTypeSkyblock();
+
+		LexiconData.preInit();
 	}
 
 	public void init(FMLInitializationEvent event) {
@@ -149,6 +149,8 @@ public class CommonProxy {
 
 		if(Botania.bcTriggersLoaded)
 			new StatementAPIPlugin();
+
+		LexiconData.init();
 	}
 
 	public void postInit(FMLPostInitializationEvent event) {
