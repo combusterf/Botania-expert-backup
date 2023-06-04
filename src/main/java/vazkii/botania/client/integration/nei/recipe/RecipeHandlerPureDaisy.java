@@ -15,6 +15,7 @@ import org.lwjgl.opengl.GL11;
 import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.recipe.RecipePureDaisy;
 import vazkii.botania.client.lib.LibResources;
+import vazkii.botania.common.core.helper.ItemNBTHelper;
 import vazkii.botania.common.item.block.ItemBlockSpecialFlower;
 import vazkii.botania.common.lib.LibBlockNames;
 import codechicken.lib.gui.GuiDraw;
@@ -55,17 +56,6 @@ public class RecipeHandlerPureDaisy extends TemplateRecipeHandler {
 		@Override
 		public List<PositionedStack> getOtherStacks() {
 			return otherStacks;
-		}
-
-		@Override
-		public boolean contains(Collection<PositionedStack> ingredients, ItemStack ingredient) {
-			if(ingredients == inputs) {
-				for(PositionedStack stack : ingredients)
-					if(stack.contains(ingredient))
-						return true;
-			}
-
-			return super.contains(ingredients, ingredient);
 		}
 
 	}
@@ -117,7 +107,7 @@ public class RecipeHandlerPureDaisy extends TemplateRecipeHandler {
 			if(recipe == null)
 				continue;
 
-			if(NEIServerUtils.areStacksSameTypeCrafting(new ItemStack(recipe.getOutput()), result))
+			if(ItemNBTHelper.areStacksSameTypeCraftingWithNBT(new ItemStack(recipe.getOutput()), result))
 				arecipes.add(new CachedPureDaisyRecipe(recipe));
 		}
 	}
@@ -129,7 +119,7 @@ public class RecipeHandlerPureDaisy extends TemplateRecipeHandler {
 				continue;
 
 			CachedPureDaisyRecipe crecipe = new CachedPureDaisyRecipe(recipe);
-			if(crecipe.contains(crecipe.getIngredients(), ingredient) || crecipe.contains(crecipe.getOtherStacks(), ingredient))
+			if(ItemNBTHelper.cachedRecipeContainsWithNBT(crecipe.getIngredients(), ingredient) || ItemNBTHelper.cachedRecipeContainsWithNBT(crecipe.getOtherStacks(), ingredient))
 				arecipes.add(crecipe);
 		}
 	}

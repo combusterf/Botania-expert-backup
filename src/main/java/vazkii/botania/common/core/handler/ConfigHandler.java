@@ -24,7 +24,6 @@ import net.minecraft.util.ChatStyle;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.common.config.Property;
-import vazkii.botania.common.Botania;
 import vazkii.botania.common.lib.LibMisc;
 import vazkii.botania.common.lib.LibPotionNames;
 import cpw.mods.fml.client.event.ConfigChangedEvent;
@@ -41,6 +40,7 @@ public final class ConfigHandler {
 
 	public static int hardcorePassiveGeneration = 72000;
 
+	public static boolean noMobSpawnOnBlocks = true;
 	public static boolean useAdaptativeConfig = true;
 
 	public static boolean enableDefaultRecipes = false;
@@ -76,7 +76,6 @@ public final class ConfigHandler {
 	public static boolean matrixMode = false;
 	public static boolean referencesEnabled = true;
 
-	public static boolean versionCheckEnabled = true;
 	public static int spreaderPositionShift = 1;
 	public static boolean flowerForceCheck = true;
 	public static boolean enderPickpocketEnabled = true;
@@ -101,6 +100,11 @@ public final class ConfigHandler {
 	public static int flowerPatchChance = 16;
 	public static double flowerTallChance = 0.05;
 	public static int mushroomQuantity = 40;
+
+	public static int[] flowerDimensionWhitelist = new int[]{};
+	public static int[] flowerDimensionBlacklist = new int[]{};
+	public static int[] mushroomDimensionWhitelist = new int[]{};
+	public static int[] mushroomDimensionBlacklist = new int[]{};
 
 	private static boolean verifiedPotionArray = false;
 	private static int potionArrayLimit = 0;
@@ -127,6 +131,9 @@ public final class ConfigHandler {
 		desc = "Set this to false to disable the Adaptative Config. Adaptative Config changes any default config values from old versions to the new defaults to make sure you aren't missing out on changes because of old configs. It will not touch any values that were changed manually.";
 		useAdaptativeConfig = loadPropBool("adaptativeConfig.enabled", desc, useAdaptativeConfig);
 		adaptor = new ConfigAdaptor(useAdaptativeConfig);
+
+		desc = "Mobs cannot Spawn on Blocks";
+		noMobSpawnOnBlocks = loadPropBool("noMobSpawnOnBlocks", desc, noMobSpawnOnBlocks);
 
 		desc = "Set this to false to disable the use of shaders for some of the mod's renders.";
 		useShaders = loadPropBool("shaders.enabled", desc, useShaders);
@@ -212,9 +219,6 @@ public final class ConfigHandler {
 		desc = "Set this to false to disable the references in the flower tooltips. (You monster D:)";
 		referencesEnabled = loadPropBool("references.enabled", desc, referencesEnabled);
 
-		desc = "Set this to false to disable checking and alerting when new Botania versions come out. (keywords for noobs: update notification message)";
-		versionCheckEnabled = loadPropBool("versionChecking.enabled", desc, versionCheckEnabled);
-
 		desc = "Do not ever touch this value if not asked to. Possible symptoms of doing so include your head turning backwards, the appearance of Titans near the walls or you being trapped in a game of Sword Art Online.";
 		spreaderPositionShift = loadPropInt("spreader.posShift", desc, spreaderPositionShift);
 
@@ -290,6 +294,18 @@ public final class ConfigHandler {
 		desc = "Enables all built-in recipes. This can be false for expert modpacks that wish to supply their own.";
 		enableDefaultRecipes = loadPropBool("recipes.enabled", desc, enableDefaultRecipes);
 
+		desc = "Whitelist of which dimension generates Botania flowers. Empty means any dimension can.";
+		flowerDimensionWhitelist = loadPropIntArray("worldgen.flower.dimensionWhitelist", desc, flowerDimensionWhitelist);
+
+		desc = "Blacklist of which dimension generates Botania flowers.";
+		flowerDimensionBlacklist = loadPropIntArray("worldgen.flower.dimensionBlacklist", desc, flowerDimensionBlacklist);
+
+		desc = "Whitelist of which dimension generates Botania mushrooms. Empty means any dimension can.";
+		mushroomDimensionWhitelist = loadPropIntArray("worldgen.mushroom.dimensionWhitelist", desc, mushroomDimensionWhitelist);
+
+		desc = "Blacklist of which dimension generates Botania mushrooms.";
+		mushroomDimensionBlacklist = loadPropIntArray("worldgen.mushroom.dimensionBlacklist", desc, mushroomDimensionBlacklist);
+
 		potionIDSoulCross = loadPropPotionId(LibPotionNames.SOUL_CROSS, potionIDSoulCross);
 		potionIDFeatherfeet = loadPropPotionId(LibPotionNames.FEATHER_FEET, potionIDFeatherfeet);
 		potionIDEmptiness = loadPropPotionId(LibPotionNames.EMPTINESS, potionIDEmptiness);
@@ -338,6 +354,16 @@ public final class ConfigHandler {
 		return prop.getBoolean(default_);
 	}
 
+	public static int[] loadPropIntArray(String propName, String desc, int[] intArray) {
+		Property prop = config.get(Configuration.CATEGORY_GENERAL, propName, intArray);
+		prop.comment = desc;
+
+		if(adaptor != null)
+			adaptor.adaptPropertyIntArray(prop, prop.getIntList());
+
+		return prop.getIntList();
+	}
+
 	public static int loadPropPotionId(String propName, int default_) {
 		if(!verifiedPotionArray)
 			verifyPotionArray();
@@ -355,7 +381,10 @@ public final class ConfigHandler {
 	private static void verifyPotionArray() {
 		if(Loader.isModLoaded("DragonAPI"))
 			potionArrayLimit = Potion.potionTypes.length;
-		else potionArrayLimit = 127;
+		else if(Loader.isModLoaded("hodgepodge"))
+			potionArrayLimit = 255;
+		else
+			potionArrayLimit = 127;
 
 		verifiedPotionArray = true;
 	}
@@ -363,22 +392,12 @@ public final class ConfigHandler {
 	public static class ConfigAdaptor {
 
 		private boolean enabled;
-		private int lastBuild;
-		private int currentBuild;
 
 		private Map<String, List<AdaptableValue>> adaptableValues = new HashMap();
 		private List<String> changes = new ArrayList();
 
 		public ConfigAdaptor(boolean enabled) {
 			this.enabled = enabled;
-
-			String lastVersion = Botania.proxy.getLastVersion();
-			try {
-				lastBuild = Integer.parseInt(lastVersion);
-				currentBuild = Integer.parseInt(LibMisc.BUILD);
-			} catch(NumberFormatException e) {
-				this.enabled = false;
-			}
 		}
 
 		public <T> void adaptProperty(Property prop, T val) {
@@ -392,9 +411,6 @@ public final class ConfigHandler {
 
 			AdaptableValue<T> bestValue = null;
 			for(AdaptableValue<T> value : adaptableValues.get(name)) {
-				if(value.version >= lastBuild) // If version is newer than what we last used we don't care about it
-					continue;
-
 				if(bestValue == null || value.version > bestValue.version)
 					bestValue = value;
 			}
@@ -467,6 +483,10 @@ public final class ConfigHandler {
 
 		public void adaptPropertyBool(Property prop, boolean val) {
 			this.<Boolean>adaptProperty(prop, val);
+		}
+
+		public void adaptPropertyIntArray(Property prop, int[] val) {
+			this.<int[]>adaptProperty(prop, val);
 		}
 
 		public static class AdaptableValue<T> {

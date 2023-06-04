@@ -23,6 +23,7 @@ import codechicken.lib.gui.GuiDraw;
 import codechicken.nei.NEIServerUtils;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.TemplateRecipeHandler;
+import vazkii.botania.common.core.helper.ItemNBTHelper;
 
 public class RecipeHandlerManaPool extends TemplateRecipeHandler {
 
@@ -64,25 +65,6 @@ public class RecipeHandlerManaPool extends TemplateRecipeHandler {
 		@Override
 		public List<PositionedStack> getOtherStacks() {
 			return otherStacks;
-		}
-
-		@Override
-		public boolean contains(Collection<PositionedStack> ingredients, ItemStack ingredient) {
-			if(ingredients == inputs) {
-				boolean skippedPool = false;
-
-				for(PositionedStack stack : ingredients) {
-					if(!skippedPool) {
-						skippedPool = true;
-						continue;
-					}
-
-					if(stack.contains(ingredient))
-						return true;
-				}
-			}
-
-			return super.contains(ingredients, ingredient);
 		}
 
 	}
@@ -136,7 +118,7 @@ public class RecipeHandlerManaPool extends TemplateRecipeHandler {
 			if(recipe == null)
 				continue;
 
-			if(NEIServerUtils.areStacksSameTypeCrafting(recipe.getOutput(), result))
+			if(ItemNBTHelper.areStacksSameTypeCraftingWithNBT(recipe.getOutput(), result))
 				arecipes.add(new CachedManaPoolRecipe(recipe));
 		}
 	}
@@ -148,7 +130,7 @@ public class RecipeHandlerManaPool extends TemplateRecipeHandler {
 				continue;
 
 			CachedManaPoolRecipe crecipe = new CachedManaPoolRecipe(recipe);
-			if(crecipe.contains(crecipe.getIngredients(), ingredient) || crecipe.contains(crecipe.getOtherStacks(), ingredient))
+			if(ItemNBTHelper.cachedRecipeContainsWithNBT(crecipe.getIngredients(), ingredient) || ItemNBTHelper.cachedRecipeContainsWithNBT(crecipe.getOtherStacks(), ingredient))
 				arecipes.add(crecipe);
 		}
 	}
